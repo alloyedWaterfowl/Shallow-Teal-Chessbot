@@ -18,6 +18,8 @@ class Bot(ChessBotBase.Bot):
 
         distance_from_center_mod = 0.2
 
+        king_walk_mod = 10
+
         total_pieces = chess.popcount(board.occupied)
 
         beginning_bonus = 2 - min(total_pieces / 16, 1)
@@ -115,6 +117,17 @@ class Bot(ChessBotBase.Bot):
             dist += chess.square_distance(pos, 44)
             dist += chess.square_distance(pos, 45)
             distance_score -= dist * distance_from_center_mod
+
+        # ------------------ KING WALKING -------------------
+
+        king_walk_score = 0
+
+        if self.color == chess.WHITE:
+            king_walk_score += chess.square_rank(king_squares[0])
+        else:
+            king_walk_score += 8 - chess.square_rank(king_squares[0])
+
+        king_walk_score *= king_walk_mod * ((endgame_bonus ** 2) - (beginning_bonus ** 2) - 0.5)
 
         material_score = (my_material - opponent_material) / middlegame_bonus
 

@@ -91,13 +91,12 @@ class Bot:
 
             return value, best_move
 
-    def eval_for_search(self, board):
-        # Return evaluation from side-to-move perspective (negamax-style)
-        base = self.evaluate(board)          # base = positive = good for self.color
+    def perspective_search(self, board):
+        base = self.evaluate(board)
         return base if board.turn == self.color else -base
 
     def quiescence(self, board, alpha, beta):
-        stand_pat = self.eval_for_search(board)
+        stand_pat = self.perspective_search(board)
 
         if stand_pat >= beta:
             return beta
