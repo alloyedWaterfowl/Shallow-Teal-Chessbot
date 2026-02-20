@@ -40,4 +40,4 @@ class StalemateChessBot(Bot):
       return 100
     return 0
 ```
-always plays for stalemate if it can see it, or else it plays randomly. Chess bots already have built in noise, so making a bot return a static value for every position will make the bot play a random move.
+always plays for stalemate if it can see it, or else it plays randomly. Chess bots already have built in noise, so making a bot return a static value for every position will make the bot play a random move. Chess bots also automatically play mate in one, but do not look for mate in more than one.
