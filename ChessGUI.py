@@ -1,4 +1,5 @@
 import tkinter as tk
+from PIL import Image, ImageDraw, ImageTk
 import chess
 
 SQUARE_SIZE = 70
@@ -26,9 +27,11 @@ class chessGUI:
         # 🔑 Make sure images exist before draw()
         self.images = {}
         self.load_images()
+        self.make_move_images()
 
         self.selected = None
         self.legal_targets = []
+        self.legal_moves = []
         self.nudge_targets = []
 
         self.status = tk.Label(self.root, text="", font=("Arial", 14))
@@ -61,6 +64,37 @@ class chessGUI:
             img = img.subsample(2, 2)  # resize as needed
             self.images[symbol] = img
 
+    def make_move_images(self):
+        dot_size = 25
+        ring_size = SQUARE_SIZE - 12
+
+        def make_dot(bg_hex, alpha=70):
+            dot_size = 25
+            # convert hex to RGB
+            bg_rgb = tuple(int(bg_hex[i:i+2], 16) for i in (1, 3, 5))
+            # opaque background
+            bg_img = Image.new("RGBA", (dot_size, dot_size), bg_rgb + (255,))
+            # fully transparent layer
+            dot = Image.new("RGBA", (dot_size, dot_size), (0, 0, 0, 0))
+            d = ImageDraw.Draw(dot)
+            # draw a circle with semi-transparent fill
+            d.ellipse(
+                (0, 0, dot_size-1, dot_size-1),
+                fill=(60, 60, 60, alpha)
+            )
+            # composite the circle on the opaque square background
+            img = Image.alpha_composite(bg_img, dot)
+            return ImageTk.PhotoImage(img)
+
+        self.move_dot_light = make_dot(LIGHT)
+        self.move_dot_dark  = make_dot(DARK)
+
+        # ring (captures)
+        ring = Image.new("RGBA", (ring_size, ring_size), (0, 0, 0, 0))
+        d = ImageDraw.Draw(ring)
+        d.ellipse((3, 3, ring_size-4, ring_size-4), outline=(60,60,60,200), width=4)
+        self.move_ring = ImageTk.PhotoImage(ring)
+        
     def draw(self):
         self.canvas.delete("all")
         for r in range(8):
@@ -69,9 +103,6 @@ class chessGUI:
                 y1 = (7 - r) * SQUARE_SIZE
                 color = LIGHT if (r + f) % 2 == 0 else DARK
                 sq = chess.square(f, r)
-
-                if sq in self.legal_targets:
-                    color = HIGHLIGHT
 
                 self.canvas.create_rectangle(
                     x1, y1, x1 + SQUARE_SIZE, y1 + SQUARE_SIZE, fill=color, outline=color
@@ -84,21 +115,47 @@ class chessGUI:
                         y1 + SQUARE_SIZE // 2,
                         image=self.images[piece.symbol()]
                     )
+                
+        for move in self.legal_moves:
+            to_sq = move.to_square
+            f = chess.square_file(to_sq)
+            r = chess.square_rank(to_sq)
+
+            x = f * SQUARE_SIZE + SQUARE_SIZE // 2
+            y = (7 - r) * SQUARE_SIZE + SQUARE_SIZE // 2
+
+            for move in self.legal_moves:
+                to_sq = move.to_square
+                f = chess.square_file(to_sq)
+                r = chess.square_rank(to_sq)
+
+                x = f * SQUARE_SIZE + SQUARE_SIZE // 2
+                y = (7 - r) * SQUARE_SIZE + SQUARE_SIZE // 2
+
+                if self.board.piece_at(to_sq):
+                    self.canvas.create_image(x, y, image=self.move_ring)
+                else:
+                    is_light = (r + f) % 2 == 0
+                    dot = self.move_dot_light if is_light else self.move_dot_dark
+                    self.canvas.create_image(x, y, image=dot)
 
     def square_at(self, x, y):
         file = x // SQUARE_SIZE
         rank = 7 - (y // SQUARE_SIZE)
         return chess.square(file, rank)
 
-
     def compute_targets(self, square):
         self.legal_targets.clear()
-        self.nudge_targets.clear()
+        self.legal_moves.clear()
 
         # normal legal moves
         for m in self.board.legal_moves:
             if m.from_square == square:
                 self.legal_targets.append(m.to_square)
+
+        for m in self.board.legal_moves:
+            if m.from_square == square:
+                self.legal_moves.append(m)
 
     def set_board(self, fen):
         self.board.set_fen(fen)
@@ -144,7 +201,7 @@ class chessGUI:
 
             self.selected = None
             self.legal_targets.clear()
-            self.nudge_targets.clear()
+            self.legal_moves.clear()
 
         self.draw()
 
