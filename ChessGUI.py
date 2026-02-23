@@ -5,7 +5,9 @@ import chess
 SQUARE_SIZE = 70
 LIGHT = "#f0d9b5"
 DARK = "#b58863"
-HIGHLIGHT = "#88ff88"
+PREV_LIGHT = "#FFCF33"
+PREV_DARK = "#B49B0A"
+HIGHLIGHT = "#ec3838"
 
 class chessGUI:
     def __init__(self, white_player='human', black_player=None):
@@ -33,6 +35,7 @@ class chessGUI:
         self.legal_targets = []
         self.legal_moves = []
         self.nudge_targets = []
+        self.prev_sq = []
 
         self.status = tk.Label(self.root, text="", font=("Arial", 14))
         self.status.pack()
@@ -88,6 +91,8 @@ class chessGUI:
 
         self.move_dot_light = make_dot(LIGHT)
         self.move_dot_dark  = make_dot(DARK)
+        self.move_dot_prev_light = make_dot(PREV_LIGHT)
+        self.move_dot_prev_dark = make_dot(PREV_DARK)
 
         # ring (captures)
         ring = Image.new("RGBA", (ring_size, ring_size), (0, 0, 0, 0))
@@ -97,12 +102,19 @@ class chessGUI:
         
     def draw(self):
         self.canvas.delete("all")
+        p = 0
         for r in range(8):
             for f in range(8):
                 x1 = f * SQUARE_SIZE
                 y1 = (7 - r) * SQUARE_SIZE
                 color = LIGHT if (r + f) % 2 == 0 else DARK
                 sq = chess.square(f, r)
+
+                if p in self.prev_sq:
+                    color = PREV_LIGHT if (r + f) % 2 == 0 else PREV_DARK
+
+                if self.board.is_check() and sq == self.board.king(self.board.turn):
+                    color = HIGHLIGHT
 
                 self.canvas.create_rectangle(
                     x1, y1, x1 + SQUARE_SIZE, y1 + SQUARE_SIZE, fill=color, outline=color
@@ -115,7 +127,8 @@ class chessGUI:
                         y1 + SQUARE_SIZE // 2,
                         image=self.images[piece.symbol()]
                     )
-                
+                p += 1
+
         for move in self.legal_moves:
             to_sq = move.to_square
             f = chess.square_file(to_sq)
@@ -137,6 +150,8 @@ class chessGUI:
                 else:
                     is_light = (r + f) % 2 == 0
                     dot = self.move_dot_light if is_light else self.move_dot_dark
+                    if to_sq in self.prev_sq:
+                        dot = self.move_dot_prev_light if is_light else self.move_dot_prev_dark
                     self.canvas.create_image(x, y, image=dot)
 
     def square_at(self, x, y):
@@ -196,6 +211,7 @@ class chessGUI:
                 self.compute_targets(sq)
         else:
             if sq in self.legal_targets or sq in self.nudge_targets:
+                self.prev_sq = [self.selected, sq]
                 self.board.push(chess.Move(self.selected, sq))
                 self.after_player_move()
 
@@ -216,7 +232,13 @@ class chessGUI:
         move, is_nudge = current_player.choose_move(self.board)
 
         if move is not None:
+            self.prev_sq.clear()
+            curr_board = self.board.piece_map().copy()
             self.board.push(move)
+            changed_board = self.board.piece_map().copy()
+            for part in range(64):
+                if curr_board.get(part) != changed_board.get(part):
+                    self.prev_sq.append(part)
             self.draw()
             self.update_status()
 
