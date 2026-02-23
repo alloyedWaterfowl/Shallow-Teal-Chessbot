@@ -3,6 +3,7 @@ import chess
 import chess.pgn
 from ChessGUI import chessGUI
 
+import ShallowTeal
 import SimpleChessBot
 import ComplexChessBot
 import RandomChessBot
@@ -11,7 +12,7 @@ import CheckChessBot
 Human = "human"
 
 black_bot = ComplexChessBot.Bot(color = chess.BLACK, depth=3, qsearch=False)
-white_bot = Human
+white_bot = ShallowTeal.Bot(color = chess.WHITE, depth=3, qsearch=False)
 
 gui = chessGUI(white_player=white_bot, black_player=black_bot)
 gui.move_time = 100
