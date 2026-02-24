@@ -157,5 +157,6 @@ class Bot:
             return None, False
         
         self.past_moves_hash[h] = best
+        print(score)
         return best
 
